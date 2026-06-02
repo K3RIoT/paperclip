@@ -1,3 +1,4 @@
+import { formatEvent as openrouterFormatEvent } from "@paperclipai/adapter-openrouter/cli";
 import type { CLIAdapterModule } from "@paperclipai/adapter-utils";
 import { printAcpxStreamEvent } from "@paperclipai/adapter-acpx-local/cli";
 import { printClaudeStreamEvent } from "@paperclipai/adapter-claude-local/cli";
@@ -62,6 +63,11 @@ const openclawGatewayCLIAdapter: CLIAdapterModule = {
   formatStdoutEvent: printOpenClawGatewayStreamEvent,
 };
 
+const openrouterCLIAdapter: CLIAdapterModule = {
+  type: "openrouter",
+  formatStdoutEvent: openrouterFormatEvent,
+};
+
 const adaptersByType = new Map<string, CLIAdapterModule>(
   [
     acpxLocalCLIAdapter,
@@ -74,6 +80,7 @@ const adaptersByType = new Map<string, CLIAdapterModule>(
     geminiLocalCLIAdapter,
     grokLocalCLIAdapter,
     openclawGatewayCLIAdapter,
+    openrouterCLIAdapter,
     processCLIAdapter,
     httpCLIAdapter,
   ].map((a) => [a.type, a]),

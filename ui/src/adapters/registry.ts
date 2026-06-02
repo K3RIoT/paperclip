@@ -1,3 +1,4 @@
+import { openrouterUIAdapter } from "./openrouter/index";
 import type { UIAdapterModule } from "./types";
 import { acpxLocalUIAdapter } from "./acpx-local";
 import { claudeLocalUIAdapter } from "./claude-local";
@@ -61,8 +62,9 @@ function registerBuiltInUIAdapters() {
     hermesLocalUIAdapter,
     openCodeLocalUIAdapter,
     piLocalUIAdapter,
-    cursorLocalUIAdapter,
+    cursorLocalUIAdapter,    
     openClawGatewayUIAdapter,
+    openrouterUIAdapter,
     processUIAdapter,
     httpUIAdapter,
   ]) {

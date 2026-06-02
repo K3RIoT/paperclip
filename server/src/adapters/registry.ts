@@ -1,3 +1,6 @@
+import { execute as openrouterExecute } from "@paperclipai/adapter-openrouter/server";
+import { testEnvironment as openrouterTest } from "@paperclipai/adapter-openrouter/server";
+import { type as openrouterType, label as openrouterLabel, models as openrouterModels } from "@paperclipai/adapter-openrouter";
 import type {
   AdapterModel,
   AdapterModelProfileDefinition,
@@ -437,6 +440,16 @@ const piLocalAdapter: ServerAdapterModule = {
 // intentional until hermes ships a matching AdapterExecutionContext type.
 const executeHermesLocal = hermesExecute as unknown as ServerAdapterModule["execute"];
 
+const openrouterAdapter: ServerAdapterModule = {
+  type: openrouterType,
+  execute: openrouterExecute,
+  testEnvironment: openrouterTest,
+  models: openrouterModels,
+  supportsLocalAgentJwt: true,
+  supportsInstructionsBundle: false,
+  requiresMaterializedRuntimeSkills: false,
+};
+
 const hermesLocalAdapter: ServerAdapterModule = {
   type: "hermes_local",
   execute: async (ctx) => {
@@ -523,6 +536,7 @@ function registerBuiltInAdapters() {
     grokLocalAdapter,
     openclawGatewayAdapter,
     hermesLocalAdapter,
+    openrouterAdapter,
     processAdapter,
     httpAdapter,
   ]) {
