@@ -51,6 +51,7 @@ COPY . .
 RUN pnpm --filter @paperclipai/ui build
 RUN pnpm --filter @paperclipai/plugin-sdk build
 RUN pnpm --filter @paperclipai/server build
+RUN pnpm --filter @paperclipai/adapter-openrouter build
 RUN test -f server/dist/index.js || (echo "ERROR: server build output missing" && exit 1)
 
 FROM base AS production
@@ -64,7 +65,8 @@ RUN npm install --global --omit=dev @anthropic-ai/claude-code@latest @openai/cod
   && rm -rf /var/lib/apt/lists/* \
   && mkdir -p /paperclip \
   && chown node:node /paperclip
-
+RUN mkdir -p /paperclip/instances/default && \
+  echo '{"allowedHostnames":["paperclip-server","localhost","127.0.0.1"]}' > /paperclip/instances/default/config.json
 COPY scripts/docker-entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 

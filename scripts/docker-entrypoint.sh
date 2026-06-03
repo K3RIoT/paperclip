@@ -25,5 +25,20 @@ fi
 if [ "$changed" = "1" ]; then
     chown -R node:node /paperclip
 fi
-
+# Ensure config directory and allowed hostnames exist
+mkdir -p /paperclip/instances/default
+if [ ! -f /paperclip/instances/default/config.json ]; then
+    echo '{"allowedHostnames":["paperclip-server","localhost","127.0.0.1"]}' > /paperclip/instances/default/config.json
+else
+    # Add paperclip-server to existing config if not already there
+    node -e "
+const fs = require('fs');
+const cfg = JSON.parse(fs.readFileSync('/paperclip/instances/default/config.json', 'utf8'));
+if (!cfg.allowedHostnames) cfg.allowedHostnames = [];
+['paperclip-server','localhost','127.0.0.1'].forEach(h => {
+    if (!cfg.allowedHostnames.includes(h)) cfg.allowedHostnames.push(h);
+});
+fs.writeFileSync('/paperclip/instances/default/config.json', JSON.stringify(cfg));
+"
+fi
 exec gosu node "$@"

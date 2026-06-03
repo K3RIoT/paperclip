@@ -5,13 +5,9 @@ import type {
 import { spawn } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import {
-  renderPaperclipWakePrompt,
-} from "@paperclipai/adapter-utils/server-utils";
 
 import {
   OPENROUTER_GENERATION_ENDPOINT,
-  type OpenRouterConfig,
 } from "../index.js";
 import { PaperclipApi } from "./paperclip-api.js";
 import { loadSkills, renderSkillsForPrompt } from "./skills.js";
@@ -29,12 +25,18 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const CLI_PATH = path.resolve(__dirname, "../../cli/dist/index.js");
 
 export async function execute(
-  ctx: AdapterExecutionContext<OpenRouterConfig>
+  ctx: AdapterExecutionContext
 ): Promise<AdapterExecutionResult> {
-  const { wake, issueId, config, onLog, authToken } = ctx;
-
-  const api = new PaperclipApi({ authToken });
-
+  const config = (ctx.agent.adapterConfig ?? ctx.config ?? {}) as Record<string, unknown>;
+  const context = ctx.context;
+  const issueId = (typeof context.issueId === "string" ? context.issueId : typeof context.taskId === "string" ? context.taskId : "");
+  const wakeReason = typeof context.wakeReason === "string" ? context.wakeReason : "";
+  const onLog = ctx.onLog;
+  const authToken = ctx.authToken ?? "";
+  const api = new PaperclipApi({
+    authToken,
+    baseUrl: process.env.PAPERCLIP_API_URL ?? "http://localhost:3100",
+  });
   // 1. Set issue to in_progress
   try {
     await api.updateIssue(issueId, { status: "in_progress" });
@@ -45,28 +47,27 @@ export async function execute(
   // 2. Build the prompt
   let prompt = "";
   try {
-    const skills = await loadSkills(config);
+    const skills = await loadSkills({ agentConfig: config, onLog });
     const renderedSkills = renderSkillsForPrompt(skills);
-    const paperclipWake = renderPaperclipWakePrompt(wake, {
-      supportsImages: false,
-    });
-    prompt = renderedSkills ? `${renderedSkills}\n\n${paperclipWake}` : paperclipWake;
+    const wake = (ctx.context as Record<string, unknown>)?.wake as string ?? "";
+    prompt = renderedSkills ? `${renderedSkills}\n\n${wakeReason}` : wakeReason;
   } catch (err) {
     emitSystem(onLog, `Error building prompt: ${err}`);
     await api.addIssueComment(issueId, { body: `Failed to build prompt: ${err}` });
     await api.updateIssue(issueId, { status: "blocked" });
-    return { text: "", inputTokens: 0, outputTokens: 0 };
+    return { exitCode: 1, signal: null, timedOut: false };
   }
 
-  emitInit(onLog, { model: config.model || "anthropic/claude-3.5-sonnet", sessionId: issueId });
+  const model = (config.model as string) || "anthropic/claude-3.5-sonnet";
+  emitInit(onLog, { model, sessionId: ctx.runtime.sessionId ?? issueId });
 
   // 3. Spawn openrouter-cli
   const cliArgs = [
     CLI_PATH,
     "--print",
     "--output-format", "stream-json",
-    "--model", config.model || "anthropic/claude-3.5-sonnet",
-    "--max-tokens", String(config.maxTokens || 4096),
+    "--model", model,
+    "--max-tokens", String(config.maxTokens ?? 4096),
   ];
 
   const env = {
@@ -180,14 +181,21 @@ export async function execute(
   }
 
   emitResult(onLog, {
-    finalAnswer: finalAssistantContent.slice(0, 500),
+    text: finalAssistantContent.slice(0, 500),
     inputTokens,
     outputTokens,
+    cachedTokens: 0,
+    costUsd: 0,
+    subtype: "",
+    isError: exitCode !== 0,
+    errors: [],
   });
 
   return {
-    text: finalAssistantContent,
-    inputTokens,
-    outputTokens,
+    exitCode,
+    signal: null,
+    timedOut: false,
+    usage: { inputTokens, outputTokens },
+    model,
   };
 }

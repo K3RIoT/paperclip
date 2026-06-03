@@ -28,8 +28,13 @@ services:
       PAPERCLIP_DEPLOYMENT_EXPOSURE: "private"
       PAPERCLIP_PUBLIC_URL: ${PAPERCLIP_PUBLIC_URL}
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
+      PAPERCLIP_AGENT_JWT_SECRET: ${PAPERCLIP_AGENT_JWT_SECRET}
+      PAPERCLIP_API_URL: "http://paperclip-server:3100"
+      PAPERCLIP_ALLOWED_HOSTNAMES: "paperclip-server"
     volumes:
       - paperclip-data:/paperclip
+      - paperclip_config:/paperclip
     depends_on:
       paperclip-db:
         condition: service_healthy
@@ -40,6 +45,7 @@ services:
 volumes:
   pgdata:
   paperclip-data:
+  paperclip_config:
 
 networks:
   internal:
